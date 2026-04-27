@@ -184,84 +184,104 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
       margin: const EdgeInsets.all(4),
       color: const Color(0xFFFFF8DC),
       elevation: 0,
-      child: Column(
-        children: [
-          // 卦名行
-          _buildHexagramNameRow(),
-          const Divider(height: 1, color: Color(0xFF8B4513)),
-          
-          // 左卦盘（主卦）
-          Expanded(
-            child: _result == null
-                ? const Center(child: Text('请点击下方"摇一爻"开始起卦'))
-                : _buildLeftBoard(),
-          ),
-          
-          const Divider(height: 1, color: Color(0xFF8B4513)),
-          
-          // 右卦盘（变卦）
-          Expanded(
-            child: _buildRightBoard(),
-          ),
-        ],
-      ),
+      child: _result == null
+          ? const Center(child: Text('请点击下方"摇一爻"开始起卦'))
+          : Column(
+              children: [
+                // 主卦区域
+                Expanded(child: _buildSingleHexagramSection('主卦', true)),
+                const Divider(height: 1, color: Color(0xFF8B4513)),
+                // 变卦区域
+                Expanded(child: _buildSingleHexagramSection('变卦', false)),
+              ],
+            ),
     );
   }
 
-  Widget _buildHexagramNameRow() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      color: const Color(0xFFDEB887).withOpacity(0.3),
-      child: Row(
-        children: [
-          const SizedBox(width: 60),
-          Expanded(
-            child: Text(
-              _hexagrams?['zhugua']?['guaxiang'] ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+  Widget _buildSingleHexagramSection(String title, bool isMain) {
+    return Column(
+      children: [
+        // 标题行
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          color: const Color(0xFFDEB887).withOpacity(0.3),
+          child: Row(
+            children: [
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              const Spacer(),
+              if (isMain && _hexagrams?['zhugua'] != null) ...[
+                Text(_hexagrams!['zhugua']!['guaxiang'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Text(_hexagrams!['zhugua']!['gong'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(width: 4),
+                Text(_hexagrams!['zhugua']!['wuxin'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.orange)),
+              ] else if (!isMain && _hexagrams?['biangua'] != null) ...[
+                Text(_hexagrams!['biangua']!['guaxiang'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Text(_hexagrams!['biangua']!['gong'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(width: 4),
+                Text(_hexagrams!['biangua']!['wuxin'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.orange)),
+              ],
+              const SizedBox(width: 8),
+            ],
           ),
-          const SizedBox(width: 40),
-          Expanded(
-            child: Text(
-              _hexagrams?['biangua']?['guaxiang'] ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+        ),
+        // 表头
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: Colors.brown.withOpacity(0.1),
+          child: const Row(
+            children: [
+              SizedBox(width: 8),
+              SizedBox(width: 45, child: Center(child: Text('六神', style: TextStyle(fontSize: 10)))),
+              SizedBox(width: 35, child: Center(child: Text('地支', style: TextStyle(fontSize: 10)))),
+              Expanded(child: Center(child: Text('主卦', style: TextStyle(fontSize: 10)))),
+              SizedBox(width: 35, child: Center(child: Text('动爻', style: TextStyle(fontSize: 10)))),
+              SizedBox(width: 45, child: Center(child: Text('六亲', style: TextStyle(fontSize: 10)))),
+              SizedBox(width: 8),
+            ],
           ),
-          const SizedBox(width: 60),
-        ],
-      ),
+        ),
+        // 六爻行
+        Expanded(
+          child: _buildSixYaoRows(isMain),
+        ),
+      ],
     );
   }
 
-  Widget _buildLeftBoard() {
+  Widget _buildSixYaoRows(bool isMain) {
+    final binary = isMain ? _result!.zhugua : _result!.biangua;
+    final liuShen = isMain ? _leftLiuShen : _rightLiuShen;
+    final liuQin = isMain ? _leftLiuQin : _rightLiuQin;
+    
     return Row(
       children: [
+        const SizedBox(width: 8),
         // 六神列
         SizedBox(
-          width: 50,
+          width: 45,
           child: Column(
             children: List.generate(6, (i) => Expanded(
               child: Center(
                 child: Text(
-                  _leftLiuShen.isNotEmpty ? _leftLiuShen[5-i] : '',
-                  style: TextStyle(fontSize: 12, color: _getLiuShenColor(5-i)),
+                  liuShen.isNotEmpty ? liuShen[5-i] : '',
+                  style: TextStyle(fontSize: 11, color: _getLiuShenColor(5-i)),
                 ),
               ),
             )),
           ),
         ),
-        // 地支行
+        // 地支列
         SizedBox(
-          width: 50,
+          width: 35,
           child: Column(
             children: List.generate(6, (i) => Expanded(
               child: Center(
                 child: Text(
                   _naDiZhi.isNotEmpty ? _naDiZhi[5-i] : '',
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 11),
                 ),
               ),
             )),
@@ -272,12 +292,12 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
           child: Column(
             children: List.generate(6, (index) {
               final reversedIndex = 5 - index;
-              final isYang = _result!.zhugua[reversedIndex] == '1';
+              final isYang = binary[reversedIndex] == '1';
               return Expanded(
                 child: Center(
                   child: Container(
-                    width: 80,
-                    height: 8,
+                    width: 70,
+                    height: 6,
                     decoration: BoxDecoration(
                       color: isYang ? Colors.black : Colors.white,
                       border: Border.all(color: Colors.black, width: 1.5),
@@ -289,19 +309,32 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
             }),
           ),
         ),
-        // 动爻列
+        // 动爻列（空心圆圈）
         SizedBox(
-          width: 30,
+          width: 35,
           child: Column(
             children: List.generate(6, (index) {
               final reversedIndex = 5 - index;
               final isChanging = _changingPositions.contains(reversedIndex);
               return Expanded(
                 child: Center(
-                  child: Text(
-                    isChanging ? '〇' : '',
-                    style: const TextStyle(fontSize: 16, color: Colors.red),
-                  ),
+                  child: isChanging
+                      ? Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.red, width: 2),
+                          ),
+                        )
+                      : Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.grey[300],
+                          ),
+                        ),
                 ),
               );
             }),
@@ -309,91 +342,19 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
         ),
         // 六亲列
         SizedBox(
-          width: 50,
+          width: 45,
           child: Column(
             children: List.generate(6, (i) => Expanded(
               child: Center(
                 child: Text(
-                  _leftLiuQin.isNotEmpty ? _leftLiuQin[5-i] : '',
+                  liuQin.isNotEmpty ? liuQin[5-i] : '',
                   style: const TextStyle(fontSize: 11, color: Colors.orange),
                 ),
               ),
             )),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildRightBoard() {
-    return Row(
-      children: [
-        // 六神列
-        SizedBox(
-          width: 50,
-          child: Column(
-            children: List.generate(6, (i) => Expanded(
-              child: Center(
-                child: Text(
-                  _rightLiuShen.isNotEmpty ? _rightLiuShen[5-i] : '',
-                  style: TextStyle(fontSize: 12, color: _getLiuShenColor(5-i)),
-                ),
-              ),
-            )),
-          ),
-        ),
-        // 地支行
-        SizedBox(
-          width: 50,
-          child: Column(
-            children: List.generate(6, (i) => Expanded(
-              child: Center(
-                child: Text(
-                  _naDiZhi.isNotEmpty ? _naDiZhi[5-i] : '',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
-            )),
-          ),
-        ),
-        // 爻列
-        Expanded(
-          child: Column(
-            children: List.generate(6, (index) {
-              final reversedIndex = 5 - index;
-              final isYang = _result!.biangua[reversedIndex] == '1';
-              return Expanded(
-                child: Center(
-                  child: Container(
-                    width: 80,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: isYang ? Colors.black : Colors.white,
-                      border: Border.all(color: Colors.black, width: 1.5),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-        // 动爻列（空白）
-        const SizedBox(width: 30),
-        // 六亲列
-        SizedBox(
-          width: 50,
-          child: Column(
-            children: List.generate(6, (i) => Expanded(
-              child: Center(
-                child: Text(
-                  _rightLiuQin.isNotEmpty ? _rightLiuQin[5-i] : '',
-                  style: const TextStyle(fontSize: 11, color: Colors.orange),
-                ),
-              ),
-            )),
-          ),
-        ),
+        const SizedBox(width: 8),
       ],
     );
   }
