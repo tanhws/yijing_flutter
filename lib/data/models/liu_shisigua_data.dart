@@ -84,4 +84,16 @@ class LiuShiSiGuaData {
       return hexagram['guaxiang']!.contains(query);
     }).toList();
   }
+
+  /// 获取爻辞
+  static Map<String, String>? getYaoCi(String binary) {
+    // 简化版爻辞
+    final index = int.parse(binary, radix: 2);
+    const yaoCiData = {
+      0: {"one": "履霜，坚冰至。", "two": "直，方，大。", "three": "含章，可贞。", "four": "括囊，无咎。", "five": "黄裳，元吉。", "six": "龙战于野。"},
+      1: {"one": "休复，吉。", "two": "休复，吉。", "three": "休复，吉。", "four": "休复，吉。", "five": "休复，吉。", "six": "休复，吉。"},
+      63: {"one": "亢龙，有悔。", "two": "见龙在田。", "three": "君子终日乾乾。", "four": "或跃在渊。", "five": "飞龙在天。", "six": "亢龙，有悔。"},
+    };
+    return yaoCiData[index];
+  }
 }

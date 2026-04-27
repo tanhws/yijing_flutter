@@ -14,7 +14,6 @@ class _SearchFragmentState extends State<SearchFragment> {
   
   String _inputText = '';
   Map<String, String>? _hexagramInfo;
-  Map<int, String>? _yaoCiInfo;
   
   // 爻辞显示
   String _yiYao = '';
@@ -29,6 +28,7 @@ class _SearchFragmentState extends State<SearchFragment> {
     
     setState(() {
       _inputText += value;
+      _hexagramInfo = null;
     });
   }
 
@@ -38,7 +38,6 @@ class _SearchFragmentState extends State<SearchFragment> {
     setState(() {
       _inputText = _inputText.substring(0, _inputText.length - 1);
       _hexagramInfo = null;
-      _yaoCiInfo = null;
       _yiYao = _erYao = _sanYao = _siYao = _wuYao = _liuYao = '';
     });
   }
@@ -50,13 +49,16 @@ class _SearchFragmentState extends State<SearchFragment> {
     if (info != null) {
       setState(() {
         _hexagramInfo = info;
-        // 这里需要获取爻辞，实际应该从liuYaoYaoCi获取
-        _yiYao = '初六';
-        _erYao = '六二';
-        _sanYao = '六三';
-        _siYao = '六四';
-        _wuYao = '六五';
-        _liuYao = '上六';
+        // 获取爻辞
+        final yaoCi = LiuShiSiGuaData.getYaoCi(_inputText);
+        if (yaoCi != null) {
+          _yiYao = yaoCi['one'] ?? '';
+          _erYao = yaoCi['two'] ?? '';
+          _sanYao = yaoCi['three'] ?? '';
+          _siYao = yaoCi['four'] ?? '';
+          _wuYao = yaoCi['five'] ?? '';
+          _liuYao = yaoCi['six'] ?? '';
+        }
       });
     }
   }
@@ -65,7 +67,6 @@ class _SearchFragmentState extends State<SearchFragment> {
     setState(() {
       _inputText = '';
       _hexagramInfo = null;
-      _yaoCiInfo = null;
       _yiYao = _erYao = _sanYao = _siYao = _wuYao = _liuYao = '';
     });
   }
@@ -82,13 +83,19 @@ class _SearchFragmentState extends State<SearchFragment> {
         child: SafeArea(
           child: Column(
             children: [
+              // 顶部卦名显示
+              _buildHeaderArea(),
+              
               // 输入区域
               _buildInputArea(),
               
-              // 爻辞显示
+              // 爻象显示
               Expanded(
-                child: _buildYaoCiArea(),
+                child: _buildHexagramDisplay(),
               ),
+              
+              // 爻辞显示
+              if (_hexagramInfo != null) _buildYaoCiArea(),
               
               // 按钮
               _buildBottomButtons(),
@@ -99,125 +106,122 @@ class _SearchFragmentState extends State<SearchFragment> {
     );
   }
 
-  Widget _buildInputArea() {
+  Widget _buildHeaderArea() {
     return Container(
-      padding: const EdgeInsets.all(8),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
       color: const Color(0xFFDEB887),
       child: Column(
         children: [
-          // 卦名显示
           Text(
-            _hexagramInfo?['guaxiang'] ?? '',
-            style: const TextStyle(
+            _hexagramInfo?['guaxiang'] ?? '请输入卦象',
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF8B4513),
+              color: _hexagramInfo != null ? const Color(0xFF8B4513) : Colors.grey,
             ),
           ),
-          const SizedBox(height: 8),
-          
-          // 二进制输入显示 + 按钮
-          Row(
-            children: [
-              // 输入显示
-              Container(
-                width: 200,
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF8B4513)),
-                ),
-                child: Center(
-                  child: Text(
-                    _inputText.isEmpty ? '请点击右侧按钮输入' : _inputText,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: _inputText.isEmpty ? Colors.grey : Colors.black,
-                    ),
+          if (_hexagramInfo != null)
+            Text(
+              '${_hexagramInfo!['gong']}  ${_hexagramInfo!['wuxin']}',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          // 输入显示框
+          Expanded(
+            child: Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFF8B4513)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  _inputText.isEmpty ? '请输入卦象' : _inputText,
+                  style: TextStyle(
+                    fontSize: 20,
+                    letterSpacing: 8,
+                    color: _inputText.isEmpty ? Colors.grey : Colors.black,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              
-              // 阴按钮
-              ElevatedButton(
-                onPressed: () => _addYao('0'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF8B4513),
-                ),
-                child: const Text('阴'),
-              ),
-              const SizedBox(width: 4),
-              
-              // 阳按钮
-              ElevatedButton(
-                onPressed: () => _addYao('1'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF8B4513),
-                ),
-                child: const Text('阳'),
-              ),
-              const SizedBox(width: 4),
-              
-              // 删除按钮
-              ElevatedButton(
-                onPressed: _deleteLast,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[100],
-                  foregroundColor: Colors.red,
-                ),
-                child: const Text('删除'),
-              ),
-            ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          
+          // 阴按钮
+          ElevatedButton(
+            onPressed: () => _addYao('0'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8B4513),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            child: const Text('阴', style: TextStyle(fontSize: 16)),
+          ),
+          const SizedBox(width: 4),
+          
+          // 阳按钮
+          ElevatedButton(
+            onPressed: () => _addYao('1'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8B4513),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            child: const Text('阳', style: TextStyle(fontSize: 16)),
+          ),
+          const SizedBox(width: 4),
+          
+          // 删除按钮
+          ElevatedButton(
+            onPressed: _deleteLast,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[100],
+              foregroundColor: Colors.red,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            child: const Text('删除', style: TextStyle(fontSize: 14)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildYaoCiArea() {
+  Widget _buildHexagramDisplay() {
     return Card(
       margin: const EdgeInsets.all(8),
       color: const Color(0xFFFFF8DC),
       elevation: 0,
       child: Column(
         children: [
-          // 卦象显示
+          const SizedBox(height: 8),
+          // 爻象垂直排列
           Expanded(
-            child: Row(
-              children: [
-                // 右侧爻象
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(6, (index) {
-                      final reversedIndex = 5 - index;
-                      final yaoValue = reversedIndex < _inputText.length 
-                          ? _inputText[reversedIndex] 
-                          : '';
-                      return _buildYaoImage(yaoValue == '1');
-                    }),
-                  ),
-                ),
-              ],
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(6, (index) {
+                  final reversedIndex = 5 - index;
+                  final yaoValue = reversedIndex < _inputText.length 
+                      ? _inputText[reversedIndex] 
+                      : '';
+                  return _buildYaoImage(yaoValue == '1');
+                }),
+              ),
             ),
           ),
-          
-          const Divider(color: Color(0xFF8B4513)),
-          
-          // 爻辞显示
-          if (_hexagramInfo != null) ...[
-            _buildYaoCiRow('上六', _liuYao),
-            _buildYaoCiRow('六五', _wuYao),
-            _buildYaoCiRow('六四', _siYao),
-            _buildYaoCiRow('六三', _sanYao),
-            _buildYaoCiRow('六二', _erYao),
-            _buildYaoCiRow('初六', _yiYao),
-          ],
         ],
       ),
     );
@@ -225,7 +229,7 @@ class _SearchFragmentState extends State<SearchFragment> {
 
   Widget _buildYaoImage(bool isYang) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 3),
       child: Container(
         width: 80,
         height: 8,
@@ -238,23 +242,38 @@ class _SearchFragmentState extends State<SearchFragment> {
     );
   }
 
+  Widget _buildYaoCiArea() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('爻辞', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 4),
+          _buildYaoCiRow('初六', _yiYao),
+          _buildYaoCiRow('六二', _erYao),
+          _buildYaoCiRow('六三', _sanYao),
+          _buildYaoCiRow('六四', _siYao),
+          _buildYaoCiRow('六五', _wuYao),
+          _buildYaoCiRow('上六', _liuYao),
+        ],
+      ),
+    );
+  }
+
   Widget _buildYaoCiRow(String label, String content) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 50,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
+            child: Text(label, style: const TextStyle(fontSize: 13)),
           ),
           Expanded(
-            child: Text(
-              content,
-              style: const TextStyle(fontSize: 14),
-            ),
+            child: Text(content, style: const TextStyle(fontSize: 13)),
           ),
         ],
       ),
@@ -263,7 +282,7 @@ class _SearchFragmentState extends State<SearchFragment> {
 
   Widget _buildBottomButtons() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

@@ -39,6 +39,9 @@ class _ProfileFragmentState extends State<ProfileFragment> {
         child: SafeArea(
           child: Column(
             children: [
+              // 八卦图标行
+              _buildBaGuaIcons(),
+              
               // 显示选中的卦象
               if (_selectedHexagram != null) _buildSelectedHexagram(),
               
@@ -53,6 +56,26 @@ class _ProfileFragmentState extends State<ProfileFragment> {
     );
   }
 
+  Widget _buildBaGuaIcons() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      color: const Color(0xFFDEB887),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text('☰', style: TextStyle(fontSize: 28)), // 乾
+          Text('☷', style: TextStyle(fontSize: 28)), // 坤
+          Text('☳', style: TextStyle(fontSize: 28)), // 震
+          Text('☴', style: TextStyle(fontSize: 28)), // 巽
+          Text('☵', style: TextStyle(fontSize: 28)), // 坎
+          Text('☲', style: TextStyle(fontSize: 28)), // 离
+          Text('☶', style: TextStyle(fontSize: 28)), // 艮
+          Text('☱', style: TextStyle(fontSize: 28)), // 兑
+        ],
+      ),
+    );
+  }
+
   Widget _buildSelectedHexagram() {
     final hexagram = _hexagramList.firstWhere(
       (h) => h['guaxiang'] == _selectedHexagram,
@@ -61,7 +84,7 @@ class _ProfileFragmentState extends State<ProfileFragment> {
     
     return Container(
       margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -79,15 +102,12 @@ class _ProfileFragmentState extends State<ProfileFragment> {
           ),
           const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildInfoChip('宫', hexagram['gong'] ?? ''),
-              const SizedBox(width: 8),
+              _buildInfoChip('宫位', hexagram['gong'] ?? ''),
               _buildInfoChip('五行', hexagram['wuxin'] ?? ''),
-              const SizedBox(width: 8),
-              _buildInfoChip('世', hexagram['shiyao'] ?? ''),
-              const SizedBox(width: 8),
-              _buildInfoChip('应', hexagram['yingyao'] ?? ''),
+              _buildInfoChip('世爻', hexagram['shiyao'] ?? ''),
+              _buildInfoChip('应爻', hexagram['yingyao'] ?? ''),
             ],
           ),
         ],
@@ -133,6 +153,10 @@ class _ProfileFragmentState extends State<ProfileFragment> {
             subtitle: Text(
               '${hexagram['gong']}  ${hexagram['wuxin']}',
               style: const TextStyle(fontSize: 12),
+            ),
+            trailing: Text(
+              '世${hexagram['shiyao']} 应${hexagram['yingyao']}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
             onTap: () {
               setState(() {
