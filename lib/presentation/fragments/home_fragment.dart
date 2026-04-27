@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/liu_shisigua_data.dart';
 import '../../data/models/liuyao_model.dart';
 import '../../data/services/liuyao_service.dart';
+import '../screens/detail_screen.dart';
 
 class HomeFragment extends StatefulWidget {
   const HomeFragment({super.key});
@@ -25,9 +26,7 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
   Map<String, Map<String, String>?>? _hexagrams;
   List<int> _changingPositions = [];
   List<String> _leftLiuQin = [];
-  List<String> _rightLiuQin = [];
   List<String> _leftLiuShen = [];
-  List<String> _rightLiuShen = [];
   List<String> _naDiZhi = [];
   
   final List<String> _liuShen = ['青龙', '朱雀', '勾陈', '螣蛇', '白虎', '玄武'];
@@ -67,9 +66,7 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
       final naDi = LiuYaoService.naDiZhi(result.zhugua, wuxin);
       _naDiZhi = naDi.split('');
       _leftLiuQin = LiuYaoService.getLiuQin(wuxin, naDi, wuxin);
-      _rightLiuQin = LiuYaoService.getLiuQin(wuxin, naDi, wuxin);
       _leftLiuShen = _liuShen;
-      _rightLiuShen = _liuShen;
     }
     
     setState(() {
@@ -112,12 +109,27 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
       _hexagrams = null;
       _changingPositions = [];
       _leftLiuQin = [];
-      _rightLiuQin = [];
       _leftLiuShen = [];
-      _rightLiuShen = [];
       _naDiZhi = [];
       _coinResults = [0, 0, 0];
     });
+  }
+
+  void _viewDetail() {
+    if (_result == null) return;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => DetailScreen(
+          zhugua: _result!.zhugua,
+          biangua: _result!.biangua,
+          dongyao: _result!.dongyao,
+          timeText: _result!.dataTime,
+          dayInGanZhi: _result!.dayInGanZhi,
+        ),
+      ),
+    );
   }
 
   @override
@@ -160,21 +172,29 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
   }
 
   Widget _buildTimeHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      color: const Color(0xFFDEB887),
-      child: Column(
-        children: [
-          Text(
-            _result != null ? _result!.dayInGanZhi : '',
-            style: const TextStyle(fontSize: 14, color: Color(0xFF8B4513)),
-          ),
-          Text(
-            _result != null ? _result!.dataTime : '请摇卦',
-            style: const TextStyle(fontSize: 18, color: Color(0xFF8B4513), fontWeight: FontWeight.bold),
-          ),
-        ],
+    return GestureDetector(
+      onTap: _throwCount >= 6 ? _viewDetail : null,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        color: const Color(0xFFDEB887),
+        child: Column(
+          children: [
+            Text(
+              _result != null ? _result!.dayInGanZhi : '',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF8B4513)),
+            ),
+            Text(
+              _result != null ? _result!.dataTime : '请摇卦',
+              style: const TextStyle(fontSize: 18, color: Color(0xFF8B4513), fontWeight: FontWeight.bold),
+            ),
+            if (_throwCount >= 6)
+              const Text(
+                '点击查看卦象详情 >',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -253,8 +273,8 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
 
   Widget _buildSixYaoRows(bool isMain) {
     final binary = isMain ? _result!.zhugua : _result!.biangua;
-    final liuShen = isMain ? _leftLiuShen : _rightLiuShen;
-    final liuQin = isMain ? _leftLiuQin : _rightLiuQin;
+    final liuShen = _leftLiuShen;
+    final liuQin = _leftLiuQin;
     
     return Row(
       children: [
@@ -295,14 +315,29 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
               final isYang = binary[reversedIndex] == '1';
               return Expanded(
                 child: Center(
-                  child: Container(
-                    width: 70,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isYang ? Colors.black : Colors.white,
-                      border: Border.all(color: Colors.black, width: 1.5),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 35,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isYang ? Colors.black : Colors.white,
+                          border: Border.all(color: Colors.black, width: 1.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 35,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isYang ? Colors.black : Colors.white,
+                          border: Border.all(color: Colors.black, width: 1.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
