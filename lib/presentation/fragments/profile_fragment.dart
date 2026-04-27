@@ -1,71 +1,51 @@
 import 'package:flutter/material.dart';
+import '../../data/models/liu_shisigua_data.dart';
 
-class ProfileFragment extends StatelessWidget {
+class ProfileFragment extends StatefulWidget {
   const ProfileFragment({super.key});
+
+  @override
+  State<ProfileFragment> createState() => _ProfileFragmentState();
+}
+
+class _ProfileFragmentState extends State<ProfileFragment> {
+  List<Map<String, String>> _hexagramList = [];
+  String? _selectedHexagram;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHexagrams();
+  }
+
+  void _loadHexagrams() {
+    _hexagramList = LiuShiSiGuaData.getAllHexagrams();
+    if (_hexagramList.isNotEmpty) {
+      setState(() {
+        _selectedHexagram = _hexagramList[0]['guaxiang'];
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的'),
-        backgroundColor: Colors.amber[700],
+        title: const Text('示卦'),
+        backgroundColor: const Color(0xFF8B4513),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.amber[50]!, Colors.white],
-          ),
-        ),
-        child: SingleChildScrollView(
+        color: const Color(0xFFFFF8DC),
+        child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 20),
-              // 头像区域
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.amber[100],
-                child: Icon(
-                  Icons.person,
-                  size: 50,
-                  color: Colors.amber[700],
-                ),
+              // 显示选中的卦象
+              if (_selectedHexagram != null) _buildSelectedHexagram(),
+              
+              // 卦象列表
+              Expanded(
+                child: _buildHexagramList(),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                '易经学者',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '探索古老智慧的奥秘',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 32),
-              
-              // 功能列表
-              _buildMenuSection('历史记录', [
-                _MenuItem(Icons.history, '起卦记录', () {}),
-                _MenuItem(Icons.bookmark, '收藏卦象', () {}),
-              ]),
-              
-              _buildMenuSection('工具', [
-                _MenuItem(Icons.calculate, '四柱计算', () {}),
-                _MenuItem(Icons.auto_stories, '卦象速查', () {}),
-              ]),
-              
-              _buildMenuSection('关于', [
-                _MenuItem(Icons.info, '关于我们', () => _showAboutDialog(context)),
-                _MenuItem(Icons.help, '使用帮助', () {}),
-                _MenuItem(Icons.settings, '设置', () {}),
-              ]),
-              
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -73,77 +53,107 @@ class ProfileFragment extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuSection(String title, List<_MenuItem> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
+  Widget _buildSelectedHexagram() {
+    final hexagram = _hexagramList.firstWhere(
+      (h) => h['guaxiang'] == _selectedHexagram,
+      orElse: () => {},
+    );
+    
+    return Container(
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF8B4513)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            hexagram['guaxiang'] ?? '',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF8B4513),
             ),
           ),
-        ),
-        Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(
-            children: items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              return Column(
-                children: [
-                  ListTile(
-                    leading: Icon(item.icon, color: Colors.amber[700]),
-                    title: Text(item.title),
-                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                    onTap: item.onTap,
-                  ),
-                  if (index < items.length - 1)
-                    const Divider(height: 1, indent: 56),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('关于'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('易经起卦 App'),
-            SizedBox(height: 8),
-            Text('版本：1.0.0'),
-            SizedBox(height: 8),
-            Text('一款基于易经六爻的起卦应用，'
-                '包含六爻起卦、四柱八字、卦象搜索等功能。'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildInfoChip('宫', hexagram['gong'] ?? ''),
+              const SizedBox(width: 8),
+              _buildInfoChip('五行', hexagram['wuxin'] ?? ''),
+              const SizedBox(width: 8),
+              _buildInfoChip('世', hexagram['shiyao'] ?? ''),
+              const SizedBox(width: 8),
+              _buildInfoChip('应', hexagram['yingyao'] ?? ''),
+            ],
           ),
         ],
       ),
     );
   }
-}
 
-class _MenuItem {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
+  Widget _buildInfoChip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDEB887).withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(fontSize: 12),
+      ),
+    );
+  }
 
-  _MenuItem(this.icon, this.title, this.onTap);
+  Widget _buildHexagramList() {
+    return ListView.builder(
+      itemCount: _hexagramList.length,
+      itemBuilder: (context, index) {
+        final hexagram = _hexagramList[index];
+        final isSelected = hexagram['guaxiang'] == _selectedHexagram;
+        
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          color: isSelected ? const Color(0xFFDEB887) : Colors.white,
+          child: ListTile(
+            leading: Text(
+              _getBaGuaSymbol(hexagram['guaxiang'] ?? ''),
+              style: const TextStyle(fontSize: 24),
+            ),
+            title: Text(
+              hexagram['guaxiang'] ?? '',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            subtitle: Text(
+              '${hexagram['gong']}  ${hexagram['wuxin']}',
+              style: const TextStyle(fontSize: 12),
+            ),
+            onTap: () {
+              setState(() {
+                _selectedHexagram = hexagram['guaxiang'];
+              });
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  String _getBaGuaSymbol(String name) {
+    if (name.contains('乾')) return '☰';
+    if (name.contains('坤')) return '☷';
+    if (name.contains('震')) return '☳';
+    if (name.contains('巽')) return '☴';
+    if (name.contains('坎')) return '☵';
+    if (name.contains('离')) return '☲';
+    if (name.contains('艮')) return '☶';
+    if (name.contains('兑')) return '☱';
+    return '☯';
+  }
 }

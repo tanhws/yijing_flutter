@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../data/models/liu_shisigua_data.dart';
 import '../../data/models/liuyao_model.dart';
 import '../../data/services/liuyao_service.dart';
@@ -12,34 +11,32 @@ class HomeFragment extends StatefulWidget {
   State<HomeFragment> createState() => _HomeFragmentState();
 }
 
-class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMixin {
+class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderStateMixin {
   final LiuYaoService _service = LiuYaoService();
   
-  // 动画控制器
   late AnimationController _coinAnimController;
   late Animation<double> _coinAnimation;
   
-  // 硬币状态
   List<int> _coinResults = [0, 0, 0];
   bool _isAnimating = false;
   int _throwCount = 0;
   
-  // 结果
   LiuYaoResult? _result;
   Map<String, Map<String, String>?>? _hexagrams;
   List<int> _changingPositions = [];
   List<String> _leftLiuQin = [];
   List<String> _rightLiuQin = [];
   List<String> _leftLiuShen = [];
+  List<String> _rightLiuShen = [];
+  List<String> _naDiZhi = [];
   
-  // 六神
   final List<String> _liuShen = ['青龙', '朱雀', '勾陈', '螣蛇', '白虎', '玄武'];
   
   @override
   void initState() {
     super.initState();
     _coinAnimController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _coinAnimation = Tween<double>(begin: 0, end: 1).animate(
@@ -65,20 +62,14 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
     final hexagrams = _service.getBothHexagrams(result);
     final changing = _service.getChangingYaoPositions(result.dongyao);
     
-    // 计算六亲和六神
     if (hexagrams['zhugua'] != null) {
-      final naDiZhi = LiuYaoService.naDiZhi(result.zhugua, hexagrams['zhugua']!['wuxin']!);
-      _leftLiuQin = LiuYaoService.getLiuQin(
-        hexagrams['zhugua']!['wuxin']!.substring(0, 1),
-        naDiZhi,
-        hexagrams['zhugua']!['wuxin']!,
-      );
-      _rightLiuQin = LiuYaoService.getLiuQin(
-        hexagrams['zhugua']!['wuxin']!.substring(0, 1),
-        naDiZhi,
-        hexagrams['zhugua']!['wuxin']!,
-      );
+      final wuxin = hexagrams['zhugua']!['wuxin']!.substring(0, 1);
+      final naDi = LiuYaoService.naDiZhi(result.zhugua, wuxin);
+      _naDiZhi = naDi.split('');
+      _leftLiuQin = LiuYaoService.getLiuQin(wuxin, naDi, wuxin);
+      _rightLiuQin = LiuYaoService.getLiuQin(wuxin, naDi, wuxin);
       _leftLiuShen = _liuShen;
+      _rightLiuShen = _liuShen;
     }
     
     setState(() {
@@ -101,20 +92,15 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
     
     setState(() => _isAnimating = true);
     
-    // 随机生成硬币结果
     final random = Random();
     setState(() {
       _coinResults = List.generate(3, (_) => random.nextInt(2));
     });
     
-    // 播放动画
     await _coinAnimController.forward(from: 0);
     
-    // 执行起卦（每次都重新起完整的卦，模拟用户摇6次）
     final result = _service.divine();
     _applyResult(result);
-    
-    // 保存结果
     await _service.saveResult(result);
   }
 
@@ -128,6 +114,8 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
       _leftLiuQin = [];
       _rightLiuQin = [];
       _leftLiuShen = [];
+      _rightLiuShen = [];
+      _naDiZhi = [];
       _coinResults = [0, 0, 0];
     });
   }
@@ -137,7 +125,7 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
     return Scaffold(
       appBar: AppBar(
         title: const Text('六爻起卦'),
-        backgroundColor: const Color(0xFF8B4513), // 棕色主题
+        backgroundColor: const Color(0xFF8B4513),
         actions: [
           if (_throwCount > 0)
             IconButton(
@@ -147,12 +135,12 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
         ],
       ),
       body: Container(
-        color: const Color(0xFFFFF8DC), // 米色背景
+        color: const Color(0xFFFFF8DC),
         child: SafeArea(
           child: Column(
             children: [
-              // 顶部时间显示
-              _buildHeader(),
+              // 顶部时间
+              _buildTimeHeader(),
               
               // 卦盘区域
               Expanded(
@@ -171,145 +159,242 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildTimeHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 4),
       color: const Color(0xFFDEB887),
-      child: Center(
-        child: Text(
-          _result != null ? '${_result!.dataTime}  ${_result!.dayInGanZhi}' : '请摇卦',
-          style: const TextStyle(
-            fontSize: 18,
-            color: Color(0xFF8B4513),
-            fontWeight: FontWeight.bold,
+      child: Column(
+        children: [
+          Text(
+            _result != null ? _result!.dayInGanZhi : '',
+            style: const TextStyle(fontSize: 14, color: Color(0xFF8B4513)),
           ),
-        ),
+          Text(
+            _result != null ? _result!.dataTime : '请摇卦',
+            style: const TextStyle(fontSize: 18, color: Color(0xFF8B4513), fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHexagramBoard() {
     return Card(
-      margin: const EdgeInsets.all(8),
+      margin: const EdgeInsets.all(4),
       color: const Color(0xFFFFF8DC),
       elevation: 0,
       child: Column(
         children: [
-          // 表头
-          _buildBoardHeader(),
+          // 卦名行
+          _buildHexagramNameRow(),
           const Divider(height: 1, color: Color(0xFF8B4513)),
-          // 六爻行
+          
+          // 左卦盘（主卦）
           Expanded(
             child: _result == null
-                ? const Center(child: Text('点击下方"摇一爻"开始起卦'))
-                : _buildSixYaoRows(),
+                ? const Center(child: Text('请点击下方"摇一爻"开始起卦'))
+                : _buildLeftBoard(),
+          ),
+          
+          const Divider(height: 1, color: Color(0xFF8B4513)),
+          
+          // 右卦盘（变卦）
+          Expanded(
+            child: _buildRightBoard(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBoardHeader() {
+  Widget _buildHexagramNameRow() {
     return Container(
-      color: const Color(0xFFDEB887).withOpacity(0.3),
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: const Row(
-        children: [
-          Expanded(flex: 1, child: Center(child: Text('六神', style: TextStyle(fontSize: 12)))),
-          Expanded(flex: 2, child: Center(child: Text('主卦', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)))),
-          Expanded(flex: 1, child: Center(child: Text('动爻', style: TextStyle(fontSize: 12)))),
-          Expanded(flex: 2, child: Center(child: Text('六亲', style: TextStyle(fontSize: 12)))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSixYaoRows() {
-    return Column(
-      children: List.generate(6, (index) {
-        final reversedIndex = 5 - index; // 从上爻开始
-        return _buildYaoRow(reversedIndex);
-      }),
-    );
-  }
-
-  Widget _buildYaoRow(int index) {
-    final zhuguaYao = _result!.zhugua[index];
-    final bianguaYao = _result!.biangua[index];
-    final dongyaoMark = _result!.dongyao[index];
-    final isChanging = dongyaoMark == '2' || dongyaoMark == '3';
-    
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: isChanging ? Colors.red.withOpacity(0.1) : Colors.transparent,
-        border: Border(
-          bottom: BorderSide(color: Colors.brown.withOpacity(0.2)),
-        ),
-      ),
+      color: const Color(0xFFDEB887).withOpacity(0.3),
       child: Row(
         children: [
-          // 六神
+          const SizedBox(width: 60),
           Expanded(
-            flex: 1,
-            child: Center(
-              child: Text(
-                _leftLiuShen.isNotEmpty ? _leftLiuShen[index] : '',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _getLiuShenColor(index),
-                ),
-              ),
+            child: Text(
+              _hexagrams?['zhugua']?['guaxiang'] ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
-          // 主卦爻
+          const SizedBox(width: 40),
           Expanded(
-            flex: 2,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 左卦
-                _buildYaoImage(zhuguaYao == '1', isChangable: false),
-                const SizedBox(width: 8),
-                // 右卦
-                _buildYaoImage(bianguaYao == '1', isChangable: false),
-              ],
+            child: Text(
+              _hexagrams?['biangua']?['guaxiang'] ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
-          // 动爻标记
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: Text(
-                isChanging ? '⚡' : '',
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
-          ),
-          // 六亲
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: Text(
-                _leftLiuQin.isNotEmpty ? _leftLiuQin[index] : '',
-                style: const TextStyle(fontSize: 12, color: Colors.orange),
-              ),
-            ),
-          ),
+          const SizedBox(width: 60),
         ],
       ),
     );
   }
 
-  Widget _buildYaoImage(bool isYang, {bool isChangable = false}) {
-    return Container(
-      width: 30,
-      height: 6,
-      decoration: BoxDecoration(
-        color: isYang ? Colors.black : Colors.white,
-        border: Border.all(color: Colors.black, width: 1.5),
-        borderRadius: BorderRadius.circular(2),
-      ),
+  Widget _buildLeftBoard() {
+    return Row(
+      children: [
+        // 六神列
+        SizedBox(
+          width: 50,
+          child: Column(
+            children: List.generate(6, (i) => Expanded(
+              child: Center(
+                child: Text(
+                  _leftLiuShen.isNotEmpty ? _leftLiuShen[5-i] : '',
+                  style: TextStyle(fontSize: 12, color: _getLiuShenColor(5-i)),
+                ),
+              ),
+            )),
+          ),
+        ),
+        // 地支行
+        SizedBox(
+          width: 50,
+          child: Column(
+            children: List.generate(6, (i) => Expanded(
+              child: Center(
+                child: Text(
+                  _naDiZhi.isNotEmpty ? _naDiZhi[5-i] : '',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            )),
+          ),
+        ),
+        // 爻列
+        Expanded(
+          child: Column(
+            children: List.generate(6, (index) {
+              final reversedIndex = 5 - index;
+              final isYang = _result!.zhugua[reversedIndex] == '1';
+              return Expanded(
+                child: Center(
+                  child: Container(
+                    width: 80,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isYang ? Colors.black : Colors.white,
+                      border: Border.all(color: Colors.black, width: 1.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        // 动爻列
+        SizedBox(
+          width: 30,
+          child: Column(
+            children: List.generate(6, (index) {
+              final reversedIndex = 5 - index;
+              final isChanging = _changingPositions.contains(reversedIndex);
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    isChanging ? '〇' : '',
+                    style: const TextStyle(fontSize: 16, color: Colors.red),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        // 六亲列
+        SizedBox(
+          width: 50,
+          child: Column(
+            children: List.generate(6, (i) => Expanded(
+              child: Center(
+                child: Text(
+                  _leftLiuQin.isNotEmpty ? _leftLiuQin[5-i] : '',
+                  style: const TextStyle(fontSize: 11, color: Colors.orange),
+                ),
+              ),
+            )),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRightBoard() {
+    return Row(
+      children: [
+        // 六神列
+        SizedBox(
+          width: 50,
+          child: Column(
+            children: List.generate(6, (i) => Expanded(
+              child: Center(
+                child: Text(
+                  _rightLiuShen.isNotEmpty ? _rightLiuShen[5-i] : '',
+                  style: TextStyle(fontSize: 12, color: _getLiuShenColor(5-i)),
+                ),
+              ),
+            )),
+          ),
+        ),
+        // 地支行
+        SizedBox(
+          width: 50,
+          child: Column(
+            children: List.generate(6, (i) => Expanded(
+              child: Center(
+                child: Text(
+                  _naDiZhi.isNotEmpty ? _naDiZhi[5-i] : '',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            )),
+          ),
+        ),
+        // 爻列
+        Expanded(
+          child: Column(
+            children: List.generate(6, (index) {
+              final reversedIndex = 5 - index;
+              final isYang = _result!.biangua[reversedIndex] == '1';
+              return Expanded(
+                child: Center(
+                  child: Container(
+                    width: 80,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isYang ? Colors.black : Colors.white,
+                      border: Border.all(color: Colors.black, width: 1.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        // 动爻列（空白）
+        const SizedBox(width: 30),
+        // 六亲列
+        SizedBox(
+          width: 50,
+          child: Column(
+            children: List.generate(6, (i) => Expanded(
+              child: Center(
+                child: Text(
+                  _rightLiuQin.isNotEmpty ? _rightLiuQin[5-i] : '',
+                  style: const TextStyle(fontSize: 11, color: Colors.orange),
+                ),
+              ),
+            )),
+          ),
+        ),
+      ],
     );
   }
 
@@ -360,7 +445,7 @@ class _HomeFragmentState extends State<HomeFragment> with TickerProviderStateMix
 
   Widget _buildBottomButton() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: ElevatedButton(
         onPressed: _throwCount < 6 && !_isAnimating ? _throwCoins : _reset,
         style: ElevatedButton.styleFrom(

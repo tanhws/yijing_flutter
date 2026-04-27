@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 
 class FourPillarCalculatorFragment extends StatefulWidget {
@@ -12,14 +13,8 @@ class _FourPillarCalculatorFragmentState extends State<FourPillarCalculatorFragm
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   
-  // 四柱结果
-  String _yearGanZhi = '';
-  String _monthGanZhi = '';
-  String _dayGanZhi = '';
-  String _hourGanZhi = '';
-  
-  String _shengXiao = '';
-  List<String> _wuXing = [];
+  String _fourPillarResult = '';
+  String _ganZhiResult = '';
   
   @override
   void initState() {
@@ -28,26 +23,18 @@ class _FourPillarCalculatorFragmentState extends State<FourPillarCalculatorFragm
   }
   
   void _calculate() {
-    final lunar = _getLunarDate(_selectedDate);
-    final ganZhi = _calculateGanZhi(_selectedDate, _selectedTime);
-    
+    final result = _calculateFourPillars(_selectedDate, _selectedTime);
     setState(() {
-      _yearGanZhi = ganZhi['year'] ?? '';
-      _monthGanZhi = ganZhi['month'] ?? '';
-      _dayGanZhi = ganZhi['day'] ?? '';
-      _hourGanZhi = ganZhi['hour'] ?? '';
-      _shengXiao = _getShengXiao(_selectedDate.year);
-      _wuXing = _getWuXing(_dayGanZhi);
+      _fourPillarResult = result['fourPillar'] ?? '';
+      _ganZhiResult = result['ganZhi'] ?? '';
     });
   }
   
-  Map<String, String> _calculateGanZhi(DateTime date, TimeOfDay time) {
-    // 简化版天干地支计算
+  Map<String, String> _calculateFourPillars(DateTime date, TimeOfDay time) {
     const tianGan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
     const diZhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
     
     // 年柱
-    final yearCycle = (date.year - 1984) % 60;
     final yearGan = tianGan[(date.year - 4) % 10];
     final yearZhi = diZhi[(date.year - 4) % 12];
     
@@ -55,7 +42,7 @@ class _FourPillarCalculatorFragmentState extends State<FourPillarCalculatorFragm
     final monthGan = tianGan[((date.year % 5) * 2 + (date.month - 1)) % 10];
     final monthZhi = diZhi[(date.month - 1) % 12];
     
-    // 日柱（简化）
+    // 日柱（简化计算）
     final dayOfYear = int.parse(DateFormat('D').format(date));
     final dayGan = tianGan[(dayOfYear + 6) % 10];
     final dayZhi = diZhi[(dayOfYear + 4) % 12];
@@ -66,229 +53,146 @@ class _FourPillarCalculatorFragmentState extends State<FourPillarCalculatorFragm
     final hourZhi = diZhi[hourIndex];
     
     return {
-      'year': '$yearGan$yearZhi',
-      'month': '$monthGan$monthZhi',
-      'day': '$dayGan$dayZhi',
-      'hour': '$hourGan$hourZhi',
-    };
-  }
-  
-  String _getShengXiao(int year) {
-    const shengXiao = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
-    return shengXiao[(year - 1900) % 12];
-  }
-  
-  List<String> _getWuXing(String dayGanZhi) {
-    // 根据日干判断五行
-    final gan = dayGanZhi.isNotEmpty ? dayGanZhi[0] : '甲';
-    const wuxing = {
-      '甲': ['木', '阳木'], '乙': ['木', '阴木'],
-      '丙': ['火', '阳火'], '丁': ['火', '阴火'],
-      '戊': ['土', '阳土'], '己': ['土', '阴土'],
-      '庚': ['金', '阳金'], '辛': ['金', '阴金'],
-      '壬': ['水', '阳水'], '癸': ['水', '阴水'],
-    };
-    return wuxing[gan] ?? ['木', '阳木'];
-  }
-  
-  Map<String, dynamic> _getLunarDate(DateTime date) {
-    // 简化版，需要配合农历库
-    return {
-      'year': date.year,
-      'month': date.month,
-      'day': date.day,
+      'fourPillar': '$yearGan$yearZhi  $monthGan$monthZhi  $dayGan$dayZhi  $hourGan$hourZhi',
+      'ganZhi': '年柱: $yearGan$yearZhi\n月柱: $monthGan$monthZhi\n日柱: $dayGan$dayZhi\n时柱: $hourGan$hourZhi',
     };
   }
 
-  Future<void> _selectDate() async {
-    final picked = await showDatePicker(
+  Future<void> _selectDateTime() async {
+    // 显示日期时间选择器
+    showModalBottomSheet(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(1900),
-      lastDate: DateTime(2100),
+      builder: (ctx) => Container(
+        height: 300,
+        color: Colors.white,
+        child: Column(
+          children: [
+            // 日期选择
+            SizedBox(
+              height: 200,
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.dateAndTime,
+                initialDateTime: DateTime(
+                  _selectedDate.year,
+                  _selectedDate.month,
+                  _selectedDate.day,
+                  _selectedTime.hour,
+                  _selectedTime.minute,
+                ),
+                onDateTimeChanged: (dateTime) {
+                  setState(() {
+                    _selectedDate = dateTime;
+                    _selectedTime = TimeOfDay.fromDateTime(dateTime);
+                  });
+                },
+              ),
+            ),
+            // 确认按钮
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _calculate();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B4513),
+                ),
+                child: const Text('确认', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-      _calculate();
-    }
-  }
-
-  Future<void> _selectTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
-    if (picked != null) {
-      setState(() => _selectedTime = picked);
-      _calculate();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('四柱八字'),
-        backgroundColor: Colors.amber[700],
+        title: const Text('排八字'),
+        backgroundColor: const Color(0xFF8B4513),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.amber[50]!, Colors.white],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+        color: const Color(0xFFFFF8DC),
+        child: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 日期时间选择
-              Card(
-                child: Padding(
+              // 时间显示（点击可修改）
+              GestureDetector(
+                onTap: _selectDateTime,
+                child: Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(16),
+                  color: const Color(0xFFDEB887),
                   child: Column(
                     children: [
-                      ListTile(
-                        leading: const Icon(Icons.calendar_today, color: Colors.amber),
-                        title: const Text('出生日期'),
-                        subtitle: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
-                        onTap: _selectDate,
+                      Text(
+                        '${_selectedDate.year}年${_selectedDate.month}月${_selectedDate.day}日',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
-                      const Divider(),
-                      ListTile(
-                        leading: const Icon(Icons.access_time, color: Colors.amber),
-                        title: const Text('出生时辰'),
-                        subtitle: Text('${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}'),
-                        onTap: _selectTime,
+                      Text(
+                        '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('点击选择时间', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // 结果显示
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // 四柱一行显示
+                      Text(
+                        _fourPillarResult,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF8B4513),
+                          letterSpacing: 8,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      // 四柱分行显示
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _ganZhiResult,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 18, height: 1.8),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
               
-              // 四柱结果
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '四柱命盘',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPillarRow('年柱', _yearGanZhi, '流年'),
-                      _buildPillarRow('月柱', _monthGanZhi, '事业'),
-                      _buildPillarRow('日柱', _dayGanZhi, '本人'),
-                      _buildPillarRow('时柱', _hourGanZhi, '财运'),
-                    ],
+              // 确认按钮
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton(
+                  onPressed: _selectDateTime,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B4513),
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // 其他信息
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '基本信息',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInfoRow('生肖', _shengXiao),
-                      _buildInfoRow('日主五行', _wuXing.isNotEmpty ? _wuXing[0] : ''),
-                      _buildInfoRow('日主属性', _wuXing.length > 1 ? _wuXing[1] : ''),
-                    ],
-                  ),
+                  child: const Text('重新选择时间', style: TextStyle(fontSize: 16, color: Colors.white)),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPillarRow(String label, String value, String meaning) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!),
-        ),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.amber,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.amber[50],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              meaning,
-              style: TextStyle(
-                color: Colors.amber[700],
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ],
       ),
     );
   }
